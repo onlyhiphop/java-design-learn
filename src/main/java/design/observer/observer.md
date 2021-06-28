@@ -57,3 +57,48 @@ public interface EventListener {}
 
 ##### spring监听机制
 
+Spring容器,具体而言是ApplicationContext接口定义的容器提供了一套相对完善的事件发布和监听框架,其遵循了JDK中的事件监听标准,并使用容器来管理相关组件,使得用户不用关心事件发布和监听的具体细节,降低了开发难度也简化了开发流程
+
+- 事件
+
+Spring为容器内事件定义了一个抽象类ApplicationEvent,该类继承了JDK中的事件基类EventObject。因而自定义容器内事件除了需要继承ApplicationEvent之外,还要传入事件源作为构造参数。
+
+![img](images/1422237-20181117121330549-758393083.png)
+
+
+
+- 事件监听器
+
+Spring定义了一个`ApplicationListener`接口作为为事件监听器的抽象
+
+```java
+@FunctionalInterface
+public interface ApplicationListener<E extends ApplicationEvent> extends EventListener {
+   void onApplicationEvent(E event);
+}
+```
+
+1、该接口继承了JDK中表示事件监听器的标记接口EventListener,内部只定义了一个抽象方法onApplicationEvent(evnt),当监听的事件在容器中被发布,该方法将被调用。
+
+2、同时,该接口是一个泛型接口,其实现类可以通过传入泛型参数指定该事件监听器要对哪些事件进行监听。这样有什么好处？这样所有的事件监听器就可以由一个事件发布器进行管理,并对所有事件进行统一发布,而具体的事件和事件监听器之间的映射关系,则可以通过反射读取泛型参数类型的方式进行匹配
+
+3、最后,所有的事件监听器都必须向容器注册,容器能够对其进行识别并委托容器内真正的事件发布器进行管理。
+
+
+
+- 事件发布器
+
+`ApplicationContext`接口继承了`ApplicationEventPublisher`接口,从而提供了对外发布事件的能力,如下所示
+
+![img](images/1422237-20181117121353627-808628342.png)
+
+那么是否可以说ApplicationContext,即容器本身就担当了事件发布器的角色呢？其实这是不准确的,容器本身仅仅是对外提供了事件发布的接口,真正的工作其实是委托给了具体容器内部一个`ApplicationEventMulticaster`对象,其定义在AbstractApplicationContext抽象类内部,如下所示
+
+```java
+/** Helper class used in event publishing */
+private ApplicationEventMulticaster applicationEventMulticaster;
+```
+
+所以,真正的事件发布器是ApplicationEventMulticaster,这是一个接口,定义了事件发布器需要具备的基本功能:管理事件监听器以及发布事件。其默认实现类是
+SimpleApplicationEventMulticaster,该组件会在容器启动时被自动创建,并以单例的形式存在,管理了所有的事件监听器,并提供针对所有容器内事件的发布功能。
+
